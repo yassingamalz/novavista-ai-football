@@ -132,3 +132,214 @@ flowchart TD
     Q --> R
     R --> S
 ```
+
+# 🚀 Step 1: Player & Ball Detection (YOLOv8 + DeepSORT)
+
+## 🔹 Goal:
+Detect players and the ball in match videos **frame by frame** using **YOLOv8** and track them in real time with **DeepSORT**.
+
+## 🛠 First Tasks
+✅ **1. Set Up the Environment**  
+✅ **2. Download Pretrained YOLOv8 Model**  
+✅ **3. Run YOLOv8 on a Sample Match Video**  
+✅ **4. Integrate DeepSORT for Player Tracking**  
+✅ **5. Save Detection Data (Player Positions, Ball Location, Time Stamps, etc.)**
+
+## 🛠 Task 1: Set Up the Environment
+
+### 📌 Install Dependencies
+Inside your project folder, create a virtual environment and install required packages:
+
+```bash
+# Create and activate a virtual environment
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install ultralytics opencv-python numpy pandas torch torchvision torchaudio
+```
+
+### 📌 Verify Installation
+Test if **YOLOv8** is correctly installed:
+
+```python
+from ultralytics import YOLO
+
+# Load a pretrained YOLOv8 model
+model = YOLO("yolov8n.pt")
+print(model)
+```
+
+If it prints the model details, **everything is working**! ✅
+
+## 🛠 Task 2: Download a Sample Match Video
+🎥 Get a **short Egyptian League match clip** (10-20 seconds) and place it inside the `data/` folder.
+
+## 🛠 Task 3: Run YOLOv8 on the Video
+Use YOLOv8 to detect players and the ball:
+
+```python
+from ultralytics import YOLO
+
+# Load YOLOv8 model
+model = YOLO("yolov8n.pt")
+
+# Run inference on the match video
+results = model("data/match_clip.mp4", save=True)
+```
+
+This will generate a video with **bounding boxes** around players and the ball.
+
+## 🎯 Next Steps (After Running YOLOv8)
+After this, we'll **integrate DeepSORT** to track each player **across frames**. 🚀
+
+Let me know when you finish this step, and I'll guide you through tracking! 🏆
+
+---
+
+# 🐳 Docker Setup for YOLOv8 + DeepSORT
+
+## 📁 Required Files
+
+### 1. Dockerfile
+```dockerfile
+# Use NVIDIA CUDA base image
+FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04
+
+# Set working directory
+WORKDIR /app
+
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    python3-pip \
+    python3-dev \
+    ffmpeg \
+    libsm6 \
+    libxext6 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python packages
+COPY requirements.txt .
+RUN pip3 install --no-cache-dir -r requirements.txt
+
+# Copy project files
+COPY . .
+
+# Command to run when starting the container
+CMD ["python3", "app.py"]
+```
+
+### 2. requirements.txt
+```text
+ultralytics>=8.0.0
+opencv-python-headless
+numpy
+pandas
+torch
+torchvision
+torchaudio
+```
+
+### 3. docker-compose.yml
+```yaml
+version: '3.8'
+
+services:
+  novavista:
+    build: .
+    container_name: novavista-ai
+    volumes:
+      - ./:/app
+      - ./data:/app/data
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    ports:
+      - "8080:8080"  # If you need web interface
+    command: python3 app.py
+```
+
+### 4. app.py
+```python
+from ultralytics import YOLO
+import cv2
+import torch
+
+def main():
+    # Print system info
+    print("🚀 Starting NovaVista AI Football Analysis")
+    print(f"PyTorch version: {torch.__version__}")
+    print(f"CUDA available: {torch.cuda.is_available()}")
+    if torch.cuda.is_available():
+        print(f"CUDA device: {torch.cuda.get_device_name(0)}")
+    
+    # Load YOLOv8 model
+    model = YOLO("yolov8n.pt")
+    print("✅ Model loaded successfully!")
+
+if __name__ == "__main__":
+    main()
+```
+
+### 5. .dockerignore
+```text
+data/*
+venv/
+__pycache__/
+*.pyc
+.git/
+.env
+```
+
+## 🚀 Usage
+
+### Build and Run with Docker Compose:
+```bash
+# Build and start the container
+docker compose up --build
+
+# Stop the container
+docker compose down
+```
+
+### Process a Video:
+```bash
+# Copy your video to the data folder
+cp your_match.mp4 data/
+
+# Enter the container
+docker exec -it novavista-ai bash
+
+# Run detection (in Python)
+python3
+```
+
+```python
+from ultralytics import YOLO
+model = YOLO("yolov8n.pt")
+results = model("data/your_match.mp4", save=True)
+```
+
+## 🔧 Benefits of Docker Setup:
+
+1. **Consistent Environment**: Same setup everywhere
+2. **GPU Support**: NVIDIA CUDA ready
+3. **No Local Setup**: Everything containerized
+4. **Volume Mounting**: Easy data access
+5. **Resource Management**: GPU and memory limits configurable
+
+## 📝 Notes:
+- Make sure you have Docker and NVIDIA Container Toolkit installed
+- The data folder is mounted as a volume, so output videos will persist
+- GPU support requires NVIDIA drivers and Docker GPU support
+- You can modify resource limits in docker-compose.yml

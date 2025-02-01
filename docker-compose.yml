@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  novavista:
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile
+    container_name: novavista-ai
+    volumes:
+      - ./:/app
+      - ./data:/app/data
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [ gpu ]
+    ports:
+      - "8080:8080"
